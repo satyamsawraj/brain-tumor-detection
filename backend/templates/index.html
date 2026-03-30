@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="AI-powered brain tumor detection and analysis using MRI scans">
+    <title>🧠 Brain Tumor Detection & Analysis | AI Medical Imaging</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header>
+            <h1>Brain Tumor Detection & Analysis</h1>
+        </header>
+        
+        <!-- Upload Section -->
+        <section class="upload-section">
+            <h2>📤 Upload MRI Scan</h2>
+            
+            <!-- File Upload -->
+            <div class="upload-area">
+                <input 
+                    type="file" 
+                    id="imageInput" 
+                    accept="image/*"
+                    aria-label="Upload MRI scan image">
+                <label for="imageInput" class="upload-label" id="uploadLabel">
+                    <span class="upload-icon">📁</span>
+                    <span class="upload-text">Choose MRI Image</span>
+                    <span class="upload-hint">Supports: JPG, PNG, JPEG</span>
+                </label>
+            </div>
+            
+            <!-- Predict Button -->
+            <button id="predictBtn" onclick="handlePredict()" aria-label="Analyze MRI scan">
+                <span class="btn-text">Analyze Scan</span>
+            </button>
+            
+            <!-- Results Display -->
+            <div class="prediction-result" id="resultSection" style="display: none;">
+                <div class="result-header">
+                    <h3>📊 Analysis Results</h3>
+                </div>
+                
+                <div class="result-content">
+                    <div class="result-item">
+                        <span class="result-label">Diagnosis:</span>
+                        <span class="result-value" id="predictionText">-</span>
+                    </div>
+                    
+                    <div class="result-item">
+                        <span class="result-label">Confidence:</span>
+                        <span class="result-value confidence" id="confidenceText">-</span>
+                    </div>
+                    
+                    <div class="confidence-bar">
+                        <div class="confidence-fill" id="confidenceBar" style="width: 0%"></div>
+                    </div>
+                </div>
+                
+                <!-- ROI Information -->
+                <div id="roiInfo" class="roi-info" style="display: none;">
+                    <div class="roi-header">
+                        <strong>🎯 Region of Interest</strong>
+                    </div>
+                    <div id="roiDetails" class="roi-details"></div>
+                </div>
+                
+                <!-- Disclaimer -->
+                <div class="disclaimer">
+                    <strong>⚠️ Medical Disclaimer:</strong> This is an AI-assisted analysis tool. 
+                    Results should be verified by qualified medical professionals. 
+                    Not a substitute for professional medical diagnosis.
+                </div>
+            </div>
+        </section>
+
+        <!-- Visualizations Grid -->
+        <section class="visualizations">
+            <h2 class="section-title">🔬 Detailed Analysis & Visualizations</h2>
+            
+            <div class="grid">
+                <!-- Card 1: CLAHE -->
+                <div class="card" data-tooltip="Contrast Limited Adaptive Histogram Equalization">
+                    <div class="card-header">
+                        <h3>CLAHE Enhancement</h3>
+                        <span class="card-badge">Preprocessing</span>
+                    </div>
+                    <div class="card-body">
+                        <img id="img-clahe" 
+                             src="{{ url_for('static', filename='outputs/clahe.png') }}?nocache={{ timestamp }}" 
+                             alt="CLAHE Enhanced MRI scan showing improved contrast"
+                             loading="lazy">
+                    </div>
+                </div>
+
+                <!-- Card 2: DTCWT -->
+                <div class="card" data-tooltip="Dual-Tree Complex Wavelet Transform">
+                    <div class="card-header">
+                        <h3>DTCWT Features</h3>
+                        <span class="card-badge">Feature Extraction</span>
+                    </div>
+                    <div class="card-body">
+                        <img id="img-dtcwt" 
+                             src="{{ url_for('static', filename='outputs/dtcwt.png') }}?nocache={{ timestamp }}" 
+                             alt="DTCWT wavelet decomposition features"
+                             loading="lazy">
+                    </div>
+                </div>
+
+                <!-- Card 3: Log-Gabor -->
+                <div class="card" data-tooltip="Multi-orientation Gabor Filters">
+                    <div class="card-header">
+                        <h3>Gabor Features</h3>
+                        <span class="card-badge">Texture Analysis</span>
+                    </div>
+                    <div class="card-body">
+                        <img id="img-loggabor" 
+                             src="{{ url_for('static', filename='outputs/loggabor.png') }}?nocache={{ timestamp }}" 
+                             alt="Gabor filter analysis showing texture patterns"
+                             loading="lazy">
+                    </div>
+                </div>
+
+                <!-- Card 4: Entropy -->
+                <div class="card" data-tooltip="Local Entropy Measurement">
+                    <div class="card-header">
+                        <h3>Entropy Analysis</h3>
+                        <span class="card-badge">Complexity Map</span>
+                    </div>
+                    <div class="card-body">
+                        <img id="img-entropy" 
+                             src="{{ url_for('static', filename='outputs/entropy.png') }}?nocache={{ timestamp }}" 
+                             alt="Entropy analysis showing tissue complexity"
+                             loading="lazy">
+                    </div>
+                </div>
+
+                <!-- Card 5: ROC -->
+                <div class="card" data-tooltip="Receiver Operating Characteristic">
+                    <div class="card-header">
+                        <h3>Model Performance</h3>
+                        <span class="card-badge">Confidence Metrics</span>
+                    </div>
+                    <div class="card-body">
+                        <img id="img-roc" 
+                             src="{{ url_for('static', filename='outputs/roc.png') }}?nocache={{ timestamp }}" 
+                             alt="ROC curve showing model performance"
+                             loading="lazy">
+                    </div>
+                </div>
+
+                <!-- Card 6: UMAP -->
+                <div class="card" data-tooltip="Classification Results">
+                    <div class="card-header">
+                        <h3>Classification</h3>
+                        <span class="card-badge">Probabilities</span>
+                    </div>
+                    <div class="card-body">
+                        <img id="img-umap" 
+                             src="{{ url_for('static', filename='outputs/umap.png') }}?nocache={{ timestamp }}" 
+                             alt="Classification probabilities for all tumor types"
+                             loading="lazy">
+                    </div>
+                </div>
+                <!-- Card 7: Model Comparison -->
+                <div class="card" data-tooltip="Model Comparison per Image">
+                    <div class="card-header">
+                      <h3>Model Comparison</h3>
+                       <span class="card-badge">SVM vs META vs WOA</span>
+                    </div>
+                    <div class="card-body">
+                    <canvas id="modelChart"></canvas>
+                    </div>
+            </div>
+
+                
+                    <div class="card-footer">
+                        <p><strong>Layout:</strong> 3 rows × 2 columns | <strong>Left:</strong> Original with green tumor outline | <strong>Right:</strong> Binary segmentation mask</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>Powered by AI & Deep Learning | © 2026 Brain Tumor Detection System</p>
+            <p class="footer-small">Research & Educational Purpose Only</p>
+        </footer>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay" style="display: none;">
+        <div class="loading-spinner"></div>
+        <p class="loading-text">Analyzing MRI scan...</p>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        let currentTimestamp = "{{ timestamp }}";
+        
+        // File input preview
+        document.getElementById('imageInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            const uploadLabel = document.getElementById('uploadLabel');
+            
+            if (file) {
+                uploadLabel.querySelector('.upload-text').textContent = file.name;
+                uploadLabel.querySelector('.upload-icon').textContent = '✅';
+                uploadLabel.classList.add('file-selected');
+            }
+        });
+        
+        // Force reload all images
+        function forceReloadImages() {
+            const newTimestamp = Date.now() + Math.random();
+            console.log('🔄 Reloading visualizations...');
+            
+            const imageIds = ['clahe', 'dtcwt', 'loggabor', 'entropy', 'roc', 'umap', 'segmentation'];
+            
+            imageIds.forEach(id => {
+                const img = document.getElementById(`img-${id}`);
+                if (img) {
+                    const basePath = `/static/outputs/${id}.png`;
+                    img.src = '';
+                    setTimeout(() => {
+                        img.src = `${basePath}?nocache=${newTimestamp}`;
+                    }, 100);
+                }
+            });
+        }
+
+        // Handle prediction
+        // ======================
+// MODEL COMPARISON GRAPH
+// =====================
+        async function handlePredict() {
+            const fileInput = document.getElementById('imageInput');
+            const predictBtn = document.getElementById('predictBtn');
+            const resultSection = document.getElementById('resultSection');
+            const loadingOverlay = document.getElementById('loadingOverlay');
+            const predictionText = document.getElementById('predictionText');
+            const confidenceText = document.getElementById('confidenceText');
+            const confidenceBar = document.getElementById('confidenceBar');
+            const roiInfo = document.getElementById('roiInfo');
+            const roiDetails = document.getElementById('roiDetails');
+            if (!fileInput.files || !fileInput.files.length) {
+                alert('⚠️ Please select an MRI image first!');
+                return;
+            }
+            
+            // Show loading
+            loadingOverlay.style.display = 'flex';
+            predictBtn.disabled = true;
+            predictBtn.innerHTML = '<span class="spinner"></span> Analyzing...';
+            roiInfo.style.display = 'none';
+            
+            const formData = new FormData();
+            formData.append('image', fileInput.files[0]);
+            
+            try {
+                const response = await fetch('/predict', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                
+                const data = await response.json();
+                console.log('FULL RESPONSE:', data);
+                const ctx = document.getElementById('modelChart').getContext('2d');
+                if (window.modelChartInstance) {
+                    window.modelChartInstance.destroy();
+                }
+                window.modelChartInstance = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['SVM', 'Meta', 'WOA'],
+                        datasets: [{
+                            label: 'Confidence (%)',
+                            data: [
+                                data.model_confidence?.svm || 0, 
+                                data.model_confidence?.meta || 0, 
+                                data.model_confidence?.woa || 0
+                            ],
+                            backgroundColor: [
+                                '#00c6ff',
+                                '#f39c12',
+                                '#e74c3c'
+                            ]
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                max: 100
+                            }
+                        }
+                    }
+                });
+                // Show results
+                resultSection.style.display = 'block';
+                predictionText.textContent = data.prediction;
+                confidenceText.textContent = `${data.confidence}%`;
+                
+                // Animate confidence bar
+                setTimeout(() => {
+                    confidenceBar.style.width = `${data.confidence}%`;
+                    confidenceBar.style.background = data.confidence > 80 
+                        ? 'linear-gradient(90deg, #06A77D, #00D084)'
+                        : data.confidence > 50
+                        ? 'linear-gradient(90deg, #F77F00, #F18F01)'
+                        : 'linear-gradient(90deg, #D62828, #F77F00)';
+                }, 100);
+                
+                // Show ROI if available
+                if (data.roi) {
+                    const roi = data.roi;
+                    roiDetails.innerHTML = `
+                        <div class="roi-grid">
+                            <div class="roi-item">
+                                <span class="roi-label">Area:</span>
+                                <span class="roi-value">${roi.area.toFixed(0)} px²</span>
+                            </div>
+                            <div class="roi-item">
+                                <span class="roi-label">Dimensions:</span>
+                                <span class="roi-value">${roi.width} × ${roi.height} px</span>
+                            </div>
+                            <div class="roi-item">
+                                <span class="roi-label">Aspect Ratio:</span>
+                                <span class="roi-value">${roi.aspect_ratio.toFixed(2)}</span>
+                            </div>
+                            <div class="roi-item">
+                                <span class="roi-label">Centroid:</span>
+                                <span class="roi-value">(${roi.centroid[0]}, ${roi.centroid[1]})</span>
+                            </div>
+                        </div>
+                    `;
+                    roiInfo.style.display = 'block';
+                }
+                
+                // Reload images
+                setTimeout(forceReloadImages, 1500);
+                
+                // Scroll to results
+                resultSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                
+            } catch (error) {
+                console.error('Error:', error);
+                alert(`❌ Error: ${error.message}`);
+            } finally {
+                loadingOverlay.style.display = 'none';
+                predictBtn.disabled = false;
+                predictBtn.innerHTML = '<span class="btn-text">Analyze Scan</span>';
+            }
+        }
+
+        // Image load handlers
+        document.querySelectorAll('.card img').forEach(img => {
+            img.addEventListener('load', function() {
+                this.style.opacity = '1';
+            });
+            
+            img.addEventListener('error', function() {
+                this.style.opacity = '0.3';
+                console.warn(`Failed to load: ${this.id}`);
+            });
+        });
+    </script>
+</body>
+</html>
